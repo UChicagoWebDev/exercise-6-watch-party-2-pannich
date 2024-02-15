@@ -494,7 +494,6 @@ let router = () => {
 
 // TODO : Make all HTTP requests after the page load with fetch calls to API endpoints that return JSON. Prefix API routes with /api. ??
 // TODO : Opening /, /login, or /profile in a new browser window opens the app to those screens. ????
-// do the {{username}} update
 
 // ----------- UI ------------
 // --------- Update {{Username}}
@@ -540,7 +539,7 @@ window.addEventListener("DOMContentLoaded", () => {
     console.log("polling");
     await getMessages();
 
-  }, 5000);
+  }, 500);
 
 
 });
