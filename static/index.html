@@ -14,7 +14,7 @@
       <div class="loggedOut" onclick="navigateTo('/login')"> <!-- TODO: Show me only to logged-out users -->
         <a>Login</a>
       </div>
-      <div class="loggedIn" onclick="navigateTo('/profile')"> <!-- TODO: Show me only to logged-in users -->
+      <div class="loggedIn"> <!-- TODO: Show me only to logged-in users -->
         <a class="welcomeBack">
           <span class="username">Welcome back, {{ Username }}!</span>
           <span class="material-symbols-outlined md-18">person</span></a>
@@ -91,8 +91,8 @@
         <label for="password">Password</label>
         <input type="password" name="password">
       </div>
-      <div class="failed"> <!-- TODO: Hide me by default. Show only on failed login attempts -->
-        <div class="message hide" id="failed-login-msg">
+      <div class="failed hide" id="failed-login-msg"> <!-- TODO: Hide me by default. Show only on failed login attempts -->
+        <div class="message">
           Oops, that username and password don't match any of our users!
         </div>
         <button onclick="oneClickSignup()">Create a new Account</button>

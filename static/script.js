@@ -4,6 +4,10 @@ const PROFILE = document.querySelector(".profile");
 const LOGIN = document.querySelector(".login");
 const ROOM = document.querySelector(".room");
 
+// user menu
+const login_menu = document.querySelectorAll(".loggedOut")
+const profile_menu = document.querySelectorAll(".loggedIn")
+
 // Custom validation on the password reset fields
 const passwordField = document.querySelector(".profile input[name=password]");
 const repeatPasswordField = document.querySelector(".profile input[name=repeatPassword]");
@@ -58,12 +62,9 @@ let CURRENT_ROOM = 0;
 // -----------------------------------------
 // ----------- User functions ---------
 
-// function hasValidCredentials(params) {
-//   // This function should check for valid credentials.
-//   // For simplicity, we'll check Local Storage, but in a real app,
-//   // this might involve checking a cookie or making an API call.
-//   return localStorage.getItem('api_key') === 'valid'; // TODO : edit this with signup stuffs
-// }
+function isAuthenticated() {
+  return localStorage.getItem("api_key") !== null;
+}
 
 async function oneClickSignup() {
   console.log("one click sign up");
@@ -82,17 +83,22 @@ async function oneClickSignup() {
       localStorage.setItem('user_name', user.username);
       localStorage.setItem('password', user.password);
       alert('Signup successful! API key stored.');
+
+      updateUserNameUI()
+
       navigateTo('/');
     }
   } catch (error) {
     console.error('Error during signup:', error);
   }
+  return;
 }
 
 function logout() {
   localStorage.removeItem('api_key');
   localStorage.removeItem('user_name');
   localStorage.removeItem('password');
+  updateUserNameUI()
   window.location.reload();
 }
 
@@ -121,13 +127,15 @@ async function login() {
 
     if (user.api_key) {
       // Store the API key in Local Storage
-      console.log("test2")
       localStorage.setItem('api_key', user.api_key);
       localStorage.setItem('user_name', user.username);
       localStorage.setItem('password', user.password);
       alert('Login successful! API key stored.');
       failedElement.classList.add("hide");
-      navigateTo('/');
+
+      updateUserNameUI()
+
+      gotoRedirect();
     } else {
       failedElement.classList.remove("hide");
     }
@@ -156,6 +164,9 @@ async function createRoom() {
     const room = await response.json();
     console.log(room.name); // debug
     CURRENT_ROOM = room.id
+
+    // update display rooms
+    displayRooms()
 
     if (room){
       navigateTo(`/room/${CURRENT_ROOM}`)
@@ -440,6 +451,7 @@ function navigateTo(path) {
 
   // Use the History API to update the URL and push the new state to the history
   history.pushState(stateObject, '', path);
+
   window.dispatchEvent(new Event('popstate')); // SPA: Update to new url wo reloading
 }
 
@@ -447,7 +459,7 @@ function navigateTo(path) {
 // -------- pages management --------
 // On page load, show the appropriate page and hide the others
 
-// show me a new "page"
+// show one, hide all others
 let showOnly = (element) => {
   SPLASH.classList.add("hide");
   LOGIN.classList.add("hide");
@@ -457,33 +469,64 @@ let showOnly = (element) => {
   element.classList.remove("hide");
 }
 
-let router = () => {
+let showUserMenu = (element) => {
+  login_menu.forEach(element => {
+    element.classList.add("hide");
+  });
+
+  profile_menu.forEach(element => {
+    element.classList.add("hide");
+    // element.addEventListener('click', navigateTo('/profile'));
+  });
+
+  element.forEach(element => {
+    element.classList.remove("hide");
+  });
+}
+
+function router() {
   let path = window.location.pathname;
 
   switch(true) { // switch is the same as if-else
     case path === "/":
-      console.log("get / page");
-      // show the index
       CURRENT_ROOM = 0;
+      if(!localStorage.getItem('api_key')){
+        showUserMenu(login_menu)
+      } else {
+        showUserMenu(profile_menu)
+      }
+
       showOnly(SPLASH);
       break;
     case path === "/profile":
-      // show the profile
-      showOnly(PROFILE);
+      CURRENT_ROOM = 0;
+      if(!localStorage.getItem('api_key')){
+        setRedirect(path);
+      } else {
+        showOnly(PROFILE);
+      }
       break;
     case path.startsWith("/room"):
-      showOnly(ROOM);
-      const roomId = path.split("/")[2]; // This is a simple way to get the room ID
-      console.log("Room ID:", roomId);
+      if(!localStorage.getItem('api_key')){
+        setRedirect(path);
+      } else {
+        showOnly(ROOM);
+        const roomId = path.split("/")[2]; // This is a simple way to get the room ID
+        console.log("Room ID:", roomId);
 
-      CURRENT_ROOM = roomId;
-      showRoom(); // load based on CURRENT_ROOM
-
+        CURRENT_ROOM = roomId;
+        showRoom(); // load based on CURRENT_ROOM
+      }
       break;
     case path === "/login":
+      CURRENT_ROOM = 0;
+      console.log("get to login");
       showOnly(LOGIN);
+
+      if(localStorage.getItem('api_key')){
+        navigateTo("/");
+      }
       break;
-    //else do 404
     default:
       console.log(`404 Page Not Found ${path}`);
       // Show 404 page or redirect to a default page
@@ -491,9 +534,22 @@ let router = () => {
   }
 }
 
+function setRedirect(path) {
+  const stateObject = { redirectAfterLogin: path };
+  history.pushState(stateObject, null, '/login');
+  router();
+}
 
-// TODO : Make all HTTP requests after the page load with fetch calls to API endpoints that return JSON. Prefix API routes with /api. ??
-// TODO : Opening /, /login, or /profile in a new browser window opens the app to those screens. ????
+function gotoRedirect() {
+  // Check if the history state has a redirect destination
+  const currentState = history.state;
+  if (currentState && currentState.redirectAfterLogin) {
+    navigateTo(currentState.redirectAfterLogin);
+  } else {
+    navigateTo('/'); // No redirectAfterLogin found, go to a default path
+  }
+}
+
 
 // ----------- UI ------------
 // --------- Update {{Username}}
@@ -506,17 +562,21 @@ function updateUserNameUI() {
   });
 }
 
-// --------- Toggle EditRoomIcon
-function editRoomToggle() {
-
-}
-
-
 window.addEventListener("DOMContentLoaded", () => {
   updateUserNameUI();
   router();
   displayRooms();
 
+  // -------------- Header -------------
+  // User menu bar
+  profile_menu.forEach(element => {
+    element.addEventListener('click', () => navigateTo('/profile'));
+  });
+  login_menu.forEach(element => {
+    element.addEventListener('click', () => navigateTo('/login'));
+  });
+
+  // -------------- Room --------------
   // edit room name toggle
   const editIcon = document.querySelector('.displayRoomName .material-symbols-outlined');
   const editroomname = document.querySelector('.editroomname');
@@ -531,6 +591,7 @@ window.addEventListener("DOMContentLoaded", () => {
     saveIcon.addEventListener('click', updateRoomName);
   }
 
+  // --------- Polling Messages ----------
   setInterval(async () => {
     if (CURRENT_ROOM == 0) {
       return;
@@ -540,7 +601,6 @@ window.addEventListener("DOMContentLoaded", () => {
     await getMessages();
 
   }, 500);
-
 
 });
 

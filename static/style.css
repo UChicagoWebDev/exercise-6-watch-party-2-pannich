@@ -421,5 +421,5 @@ h3 {
 }
 
 .hide {
-  display: none;
+  display: none !important;
 }
